@@ -36,6 +36,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 
 #ident "Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved."
 
+#include "toku_assert.h"
 #include "toku_time.h"
 
 #if !defined(HAVE_CLOCK_REALTIME)
@@ -62,11 +63,29 @@ int toku_clock_gettime(clockid_t clk_id, struct timespec *ts) {
     ts->tv_nsec = mts.tv_nsec;
     return 0;
 }
+
 #else // defined(HAVE_CLOCK_REALTIME)
 
 #include <time.h>
+
 int toku_clock_gettime(clockid_t clk_id, struct timespec *ts) {
     return clock_gettime(clk_id, ts);
 }
 
 #endif
+
+tokutime_t toku_time_now(void) {
+    struct timespec t;
+    int r = toku_clock_gettime(CLOCK_REALTIME, &t);
+    assert_zero(r);
+    return t.tv_sec * 1000000000ULL + t.tv_nsec;
+}
+
+double tokutime_to_seconds(tokutime_t t) {
+    return (double) t / 1000000000.0;
+}
+
+uint64_t toku_current_time_microsec(void) {
+    return toku_time_now() / 1000ULL;
+}
+

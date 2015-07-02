@@ -56,6 +56,7 @@ typedef int clockid_t;
 // without a real clock_gettime()
 #define CLOCK_REALTIME 0x01867234
 #endif
+
 int toku_clock_gettime(clockid_t clk_id, struct timespec *ts) __attribute__((__visibility__("default")));
 
 // *************** Performance timers ************************
@@ -96,15 +97,6 @@ typedef uint64_t tokutime_t;             // Time type used in by tokutek timers.
 //
 double tokutime_to_seconds(tokutime_t)  __attribute__((__visibility__("default"))); // Convert tokutime to seconds.
 
-// Get the value of tokutime for right now.  We want this to be fast, so we expose the implementation as RDTSC.
-static inline tokutime_t toku_time_now(void) {
-    uint32_t lo, hi;
-    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-    return (uint64_t)hi << 32 | lo;
-}
+tokutime_t toku_time_now(void);
 
-static inline uint64_t toku_current_time_microsec(void) {
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return t.tv_sec * (1UL * 1000 * 1000) + t.tv_usec;
-}
+uint64_t toku_current_time_microsec(void);

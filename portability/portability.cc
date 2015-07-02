@@ -82,10 +82,6 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 int
 toku_portability_init(void) {
     int r = toku_memory_startup();
-    if (r == 0) {
-        uint64_t hz;
-        r = toku_os_get_processor_frequency(&hz); // get and cache freq
-    }
     (void) toku_os_get_pagesize(); // get and cache pagesize
     return r;
 }
@@ -277,94 +273,6 @@ toku_fstat(int fd, toku_struct_stat *buf) {
     return r;
 }
 
-static int
-toku_get_processor_frequency_sys(uint64_t *hzret) {
-    int r;
-    FILE *fp = fopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r");
-    if (!fp) 
-        r = get_error_errno();
-    else {
-        unsigned int khz = 0;
-        if (fscanf(fp, "%u", &khz) == 1) {
-            *hzret = khz * 1000ULL;
-            r = 0;
-        } else
-            r = ENOENT;
-        fclose(fp);
-    }
-    return r;
-}
-
-static int
-toku_get_processor_frequency_cpuinfo(uint64_t *hzret) {
-    int r;
-    FILE *fp = fopen("/proc/cpuinfo", "r");
-    if (!fp) {
-        r = get_error_errno();
-    } else {
-        uint64_t maxhz = 0;
-        char *buf = NULL;
-        size_t n = 0;
-        while (getline(&buf, &n, fp) >= 0) {
-            unsigned int cpu;
-            sscanf(buf, "processor : %u", &cpu);
-            unsigned int ma, mb;
-            if (sscanf(buf, "cpu MHz : %u.%u", &ma, &mb) == 2) {
-                uint64_t hz = ma * 1000000ULL + mb * 1000ULL;
-                if (hz > maxhz)
-                    maxhz = hz;
-            }
-        }
-        if (buf)
-            free(buf);
-        fclose(fp);
-        *hzret = maxhz;
-        r = maxhz == 0 ? ENOENT : 0;;
-    }
-    return r;
-}
-
-static int
-toku_get_processor_frequency_sysctl(const char * const cmd, uint64_t *hzret) {
-    int r = 0;
-    FILE *fp = popen(cmd, "r");
-    if (!fp) {
-        r = EINVAL;  // popen doesn't return anything useful in errno,
-                     // gotta pick something
-    } else {
-        r = fscanf(fp, "%" SCNu64, hzret);
-        if (r != 1) {
-            r = get_maybe_error_errno();
-        } else {
-            r = 0;
-        }
-        pclose(fp);
-    }
-    return r;
-}
-
-static uint64_t toku_cached_hz; // cache the value of hz so that we avoid opening files to compute it later
-
-int 
-toku_os_get_processor_frequency(uint64_t *hzret) {
-    int r;
-    if (toku_cached_hz) {
-        *hzret = toku_cached_hz;
-        r = 0;
-    } else {
-        r = toku_get_processor_frequency_sys(hzret);
-        if (r != 0)
-            r = toku_get_processor_frequency_cpuinfo(hzret);
-        if (r != 0)
-            r = toku_get_processor_frequency_sysctl("sysctl -n hw.cpufrequency", hzret);
-        if (r != 0)
-            r = toku_get_processor_frequency_sysctl("sysctl -n machdep.tsc_freq", hzret);
-        if (r == 0)
-            toku_cached_hz = *hzret;
-    }
-    return r;
-}
-
 int
 toku_get_filesystem_sizes(const char *path, uint64_t *avail_size, uint64_t *free_size, uint64_t *total_size) {
     struct statvfs s;
@@ -393,27 +301,8 @@ toku_dup2(int fd, int fd2) {
     return r;
 }
 
-
-// Time
-static       double seconds_per_clock = -1;
-
-double tokutime_to_seconds(tokutime_t t) {
-    // Convert tokutime to seconds.
-    if (seconds_per_clock<0) {
-	uint64_t hz;
-	int r = toku_os_get_processor_frequency(&hz);
-	assert(r==0);
-	// There's a race condition here, but it doesn't really matter.  If two threads call tokutime_to_seconds
-	// for the first time at the same time, then both will fetch the value and set the same value.
-	seconds_per_clock = 1.0/hz;
-    }
-    return t*seconds_per_clock;
-}
-
 #include <toku_race_tools.h>
 void __attribute__((constructor)) toku_portability_helgrind_ignore(void);
-void
-toku_portability_helgrind_ignore(void) {
-    TOKU_VALGRIND_HG_DISABLE_CHECKING(&toku_cached_hz, sizeof toku_cached_hz);
+void toku_portability_helgrind_ignore(void) {
     TOKU_VALGRIND_HG_DISABLE_CHECKING(&toku_cached_pagesize, sizeof toku_cached_pagesize);
 }
