@@ -598,8 +598,6 @@ void toku_ftnode_checkpoint_complete_callback(void *value_data) {
     }
 }
 
-volatile int toku_ftnode_do_verify = 4+2+1;
-
 void toku_ftnode_clone_callback(
     void* value_data,
     void** cloned_value_data,
@@ -614,11 +612,12 @@ void toku_ftnode_clone_callback(
     FT ft = static_cast<FT>(write_extraargs);
     FTNODE XCALLOC(cloned_node);
     if (node->height == 0) {
-        if (toku_ftnode_do_verify & 4) toku_verify_ftnode(ft, node);
+        toku_verify_ftnode(ft, node, __FILE__, __LINE__);
         // set header stats, must be done before rebalancing
         toku_ftnode_update_disk_stats(node, ft, for_checkpoint);
         // rebalance the leaf node
         toku_ftnode_leaf_rebalance(node, ft->h->basementnodesize);
+        toku_verify_ftnode(ft, node, __FILE__, __LINE__);
     }
 
     cloned_node->oldest_referenced_xid_known = node->oldest_referenced_xid_known;
@@ -684,16 +683,17 @@ void toku_ftnode_flush_callback(
     if (write_me) {
         toku_ftnode_assert_fully_in_memory(ftnode);
         if (height > 0 && !is_clone) {
+            toku_verify_ftnode(ft, ftnode, __FILE__, __LINE__);
             // cloned nodes already had their stale messages moved, see toku_ftnode_clone_callback()
             toku_move_ftnode_messages_to_stale(ft, ftnode);
         } else if (height == 0) {
-            if (toku_ftnode_do_verify & 2) toku_verify_ftnode(ft, ftnode);
+            toku_verify_ftnode(ft, ftnode, __FILE__, __LINE__);
             toku_ftnode_leaf_run_gc(ft, ftnode);
             if (!is_clone) {
                 toku_ftnode_update_disk_stats(ftnode, ft, for_checkpoint);
             }
         }
-        if (toku_ftnode_do_verify & 1) toku_verify_ftnode(ft, ftnode);
+        toku_verify_ftnode(ft, ftnode, __FILE__, __LINE__);
         int r = toku_serialize_ftnode_to(fd, ftnode->blocknum, ftnode, ndd, !is_clone, ft, for_checkpoint);
         assert_zero(r);
         ftnode->layout_version_read_from_disk = FT_LAYOUT_VERSION;
@@ -4234,8 +4234,8 @@ static int
 toku_dump_ftnode (FILE *file, FT_HANDLE ft_handle, BLOCKNUM blocknum, int depth, const DBT *lorange, const DBT *hirange) {
     int result=0;
     FTNODE node;
-    toku_get_node_for_verify(blocknum, ft_handle, &node);
-    result=toku_verify_ftnode(ft_handle, ft_handle->ft->h->max_msn_in_ft, ft_handle->ft->h->max_msn_in_ft, false, node, -1, lorange, hirange, NULL, NULL, 0, 1, 0);
+    toku_get_node_for_verify(blocknum, ft_handle->ft, &node);
+    result=toku_verify_ftnode(ft_handle->ft, ft_handle->ft->h->max_msn_in_ft, ft_handle->ft->h->max_msn_in_ft, false, node, -1, lorange, hirange, NULL, NULL, 0, 1, 0);
     uint32_t fullhash = toku_cachetable_hash(ft_handle->ft->cf, blocknum);
     ftnode_fetch_extra bfe;
     bfe.create_for_full_read(ft_handle->ft);

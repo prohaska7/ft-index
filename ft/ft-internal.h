@@ -412,10 +412,10 @@ void toku_pin_node_with_min_bfe(FTNODE* node, BLOCKNUM b, FT_HANDLE t);
 void toku_ft_root_put_msg(FT ft, const ft_msg &msg, txn_gc_info *gc_info);
 
 // TODO: Rename
-void toku_get_node_for_verify(BLOCKNUM blocknum, FT_HANDLE ft_h, FTNODE* nodep);
+void toku_get_node_for_verify(BLOCKNUM blocknum, FT ft, FTNODE* nodep);
 
 int
-toku_verify_ftnode (FT_HANDLE ft_h,
+toku_verify_ftnode (FT ft,
                     MSN rootmsn, MSN parentmsn_with_messages, bool messages_exist_above,
                      FTNODE node, int height,
                      const DBT *lesser_pivot,               // Everything in the subtree should be > lesser_pivot.  (lesser_pivot==NULL if there is no lesser pivot.)
@@ -424,7 +424,7 @@ toku_verify_ftnode (FT_HANDLE ft_h,
                      int recurse, int verbose, int keep_going_on_failure)
     __attribute__ ((warn_unused_result));
 
-void toku_verify_ftnode(FT, FTNODE);
+void toku_verify_ftnode(FT, FTNODE, const char *file, unsigned line);
 
 int toku_db_badformat(void) __attribute__((__warn_unused_result__));
 

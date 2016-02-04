@@ -51,23 +51,23 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #include "ft/node.h"
 
 static int 
-compare_pairs (FT_HANDLE ft_handle, const DBT *a, const DBT *b) {
-    return ft_handle->ft->cmp(a, b);
+compare_pairs (FT ft, const DBT *a, const DBT *b) {
+    return ft->cmp(a, b);
 }
 
 static int 
-compare_pair_to_key (FT_HANDLE ft_handle, const DBT *a, const void *key, uint32_t keylen) {
+compare_pair_to_key (FT ft, const DBT *a, const void *key, uint32_t keylen) {
     DBT y;
-    return ft_handle->ft->cmp(a, toku_fill_dbt(&y, key, keylen));
+    return ft->cmp(a, toku_fill_dbt(&y, key, keylen));
 }
 
 static int
-verify_msg_in_child_buffer(FT_HANDLE ft_handle, enum ft_msg_type type, MSN msn, const void *key, uint32_t keylen, const void *UU(data), uint32_t UU(datalen), XIDS UU(xids), const DBT *lesser_pivot, const DBT *greatereq_pivot)
+verify_msg_in_child_buffer(FT ft, enum ft_msg_type type, MSN msn, const void *key, uint32_t keylen, const void *UU(data), uint32_t UU(datalen), XIDS UU(xids), const DBT *lesser_pivot, const DBT *greatereq_pivot)
     __attribute__((warn_unused_result));
 
 UU()
 static int
-verify_msg_in_child_buffer(FT_HANDLE ft_handle, enum ft_msg_type type, MSN msn, const void *key, uint32_t keylen, const void *UU(data), uint32_t UU(datalen), XIDS UU(xids), const DBT *lesser_pivot, const DBT *greatereq_pivot) {
+verify_msg_in_child_buffer(FT ft, enum ft_msg_type type, MSN msn, const void *key, uint32_t keylen, const void *UU(data), uint32_t UU(datalen), XIDS UU(xids), const DBT *lesser_pivot, const DBT *greatereq_pivot) {
     int result = 0;
     if (msn.msn == ZERO_MSN.msn)
         result = EINVAL;
@@ -81,12 +81,12 @@ verify_msg_in_child_buffer(FT_HANDLE ft_handle, enum ft_msg_type type, MSN msn, 
     case FT_COMMIT_ANY:
         // verify key in bounds
         if (lesser_pivot) {
-            int compare = compare_pair_to_key(ft_handle, lesser_pivot, key, keylen);
+            int compare = compare_pair_to_key(ft, lesser_pivot, key, keylen);
             if (compare >= 0)
                 result = EINVAL;
         }
         if (result == 0 && greatereq_pivot) {
-            int compare = compare_pair_to_key(ft_handle, greatereq_pivot, key, keylen);
+            int compare = compare_pair_to_key(ft, greatereq_pivot, key, keylen);
             if (compare < 0)
                 result = EINVAL;
         }
@@ -195,7 +195,7 @@ int verify_marked_messages(const int32_t &offset, const uint32_t UU(idx), struct
 
 template<typename verify_omt_t>
 static int
-verify_sorted_by_key_msn(FT_HANDLE ft_handle, message_buffer *msg_buffer, const verify_omt_t &mt) {
+verify_sorted_by_key_msn(FT ft, message_buffer *msg_buffer, const verify_omt_t &mt) {
     int result = 0;
     size_t last_offset = 0;
     for (uint32_t i = 0; i < mt.size(); i++) {
@@ -203,7 +203,7 @@ verify_sorted_by_key_msn(FT_HANDLE ft_handle, message_buffer *msg_buffer, const 
         int r = mt.fetch(i, &offset);
         assert_zero(r);
         if (i > 0) {
-            struct toku_msg_buffer_key_msn_cmp_extra extra(ft_handle->ft->cmp, msg_buffer);
+            struct toku_msg_buffer_key_msn_cmp_extra extra(ft->cmp, msg_buffer);
             if (toku_msg_buffer_key_msn_cmp(extra, last_offset, offset) >= 0) {
                 result = TOKUDB_NEEDS_REPAIR;
                 break;
@@ -216,8 +216,8 @@ verify_sorted_by_key_msn(FT_HANDLE ft_handle, message_buffer *msg_buffer, const 
 
 template<typename count_omt_t>
 static int
-count_eq_key_msn(FT_HANDLE ft_handle, message_buffer *msg_buffer, const count_omt_t &mt, const DBT *key, MSN msn) {
-    struct toku_msg_buffer_key_msn_heaviside_extra extra(ft_handle->ft->cmp, msg_buffer, key, msn);
+count_eq_key_msn(FT ft, message_buffer *msg_buffer, const count_omt_t &mt, const DBT *key, MSN msn) {
+    struct toku_msg_buffer_key_msn_heaviside_extra extra(ft->cmp, msg_buffer, key, msn);
     int r = mt.template find_zero<struct toku_msg_buffer_key_msn_heaviside_extra, toku_msg_buffer_key_msn_heaviside>(extra, nullptr, nullptr);
     int count;
     if (r == 0) {
@@ -232,15 +232,15 @@ count_eq_key_msn(FT_HANDLE ft_handle, message_buffer *msg_buffer, const count_om
 void
 toku_get_node_for_verify(
     BLOCKNUM blocknum,
-    FT_HANDLE ft_handle,
+    FT ft,
     FTNODE* nodep
     )
 {
-    uint32_t fullhash = toku_cachetable_hash(ft_handle->ft->cf, blocknum);
+    uint32_t fullhash = toku_cachetable_hash(ft->cf, blocknum);
     ftnode_fetch_extra bfe;
-    bfe.create_for_full_read(ft_handle->ft);
+    bfe.create_for_full_read(ft);
     toku_pin_ftnode(
-        ft_handle->ft,
+        ft,
         blocknum,
         fullhash,
         &bfe,
@@ -251,7 +251,7 @@ toku_get_node_for_verify(
 }
 
 struct verify_msg_fn {
-    FT_HANDLE ft_handle;
+    FT ft;
     NONLEAF_CHILDINFO bnc;
     const DBT *curr_less_pivot;
     const DBT *curr_geq_pivot;
@@ -263,12 +263,14 @@ struct verify_msg_fn {
 
     MSN last_msn;
     int msg_i;
+    bool verify_msn;
+
     int result = 0; // needed by VERIFY_ASSERTION
 
-    verify_msg_fn(FT_HANDLE handle, NONLEAF_CHILDINFO nl, const DBT *less, const DBT *geq,
-                  BLOCKNUM b, MSN tmsn, int v, int k, bool m) :
-        ft_handle(handle), bnc(nl), curr_less_pivot(less), curr_geq_pivot(geq),
-        blocknum(b), this_msn(tmsn), verbose(v), keep_going_on_failure(k), messages_have_been_moved(m), last_msn(ZERO_MSN), msg_i(0) {
+    verify_msg_fn(FT the_ft, NONLEAF_CHILDINFO nl, const DBT *less, const DBT *geq,
+                  BLOCKNUM b, MSN tmsn, int v, int k, bool m, bool _verify_msn) :
+        ft(the_ft), bnc(nl), curr_less_pivot(less), curr_geq_pivot(geq),
+        blocknum(b), this_msn(tmsn), verbose(v), keep_going_on_failure(k), messages_have_been_moved(m), last_msn(ZERO_MSN), msg_i(0), verify_msn(_verify_msn) {
     }
 
     int operator()(const ft_msg &msg, bool is_fresh) {
@@ -280,18 +282,22 @@ struct verify_msg_fn {
         uint32_t keylen = msg.kdbt()->size;
         uint32_t datalen = msg.vdbt()->size;
 
-        int r = verify_msg_in_child_buffer(ft_handle, type, msn, key, keylen, data, datalen, xid,
+        int r = verify_msg_in_child_buffer(ft, type, msn, key, keylen, data, datalen, xid,
                                            curr_less_pivot,
                                            curr_geq_pivot);
         VERIFY_ASSERTION(r == 0, msg_i, "A message in the buffer is out of place");
-        VERIFY_ASSERTION((msn.msn > last_msn.msn), msg_i, "msn per msg must be monotonically increasing toward newer messages in buffer");
-        VERIFY_ASSERTION((msn.msn <= this_msn.msn), msg_i, "all messages must have msn within limit of this node's max_msn_applied_to_node_in_memory");
+        if (verify_msn) {
+            VERIFY_ASSERTION((msn.msn > last_msn.msn), msg_i, "msn per msg must be monotonically increasing toward newer messages in buffer");
+            VERIFY_ASSERTION((msn.msn <= this_msn.msn), msg_i, "all messages must have msn within limit of this node's max_msn_applied_to_node_in_memory");
+            if (r != 0)
+                abort();
+        }
         if (ft_msg_type_applies_once(type)) {
             int count;
             DBT keydbt;
             toku_fill_dbt(&keydbt, key, keylen);
             int total_count = 0;
-            count = count_eq_key_msn(ft_handle, &bnc->msg_buffer, bnc->fresh_message_tree, toku_fill_dbt(&keydbt, key, keylen), msn);
+            count = count_eq_key_msn(ft, &bnc->msg_buffer, bnc->fresh_message_tree, toku_fill_dbt(&keydbt, key, keylen), msn);
             total_count += count;
             if (is_fresh) {
                 VERIFY_ASSERTION(count == 1, msg_i, "a fresh message was not found in the fresh message tree");
@@ -299,7 +305,7 @@ struct verify_msg_fn {
                 VERIFY_ASSERTION(count == 0, msg_i, "a stale message was found in the fresh message tree");
             }
             VERIFY_ASSERTION(count <= 1, msg_i, "a message was found multiple times in the fresh message tree");
-            count = count_eq_key_msn(ft_handle, &bnc->msg_buffer, bnc->stale_message_tree, &keydbt, msn);
+            count = count_eq_key_msn(ft, &bnc->msg_buffer, bnc->stale_message_tree, &keydbt, msn);
 
             total_count += count;
             if (is_fresh) {
@@ -325,12 +331,13 @@ done:
 };
 
 static int
-toku_verify_ftnode_internal(FT_HANDLE ft_handle,
+toku_verify_ftnode_internal(FT ft,
                             MSN rootmsn, MSN parentmsn_with_messages, bool messages_exist_above,
                             FTNODE node, int height,
                             const DBT *lesser_pivot,               // Everything in the subtree should be > lesser_pivot.  (lesser_pivot==NULL if there is no lesser pivot.)
                             const DBT *greatereq_pivot,            // Everything in the subtree should be <= lesser_pivot.  (lesser_pivot==NULL if there is no lesser pivot.)
-                            int verbose, int keep_going_on_failure, bool messages_have_been_moved)
+                            int verbose, int keep_going_on_failure, bool messages_have_been_moved,
+                            bool verify_msn)
 {
     int result=0;
     MSN   this_msn;
@@ -343,24 +350,24 @@ toku_verify_ftnode_internal(FT_HANDLE ft_handle,
     if (height >= 0) {
         invariant(height == node->height);   // this is a bad failure if wrong
     }
-    if (node->height > 0 && messages_exist_above) {
+    if (verify_msn && node->height > 0 && messages_exist_above) {
         VERIFY_ASSERTION((parentmsn_with_messages.msn >= this_msn.msn), 0, "node msn must be descending down tree, newest messages at top");
     }
     // Verify that all the pivot keys are in order.
     for (int i = 0; i < node->n_children-2; i++) {
         DBT x, y;
-        int compare = compare_pairs(ft_handle, node->pivotkeys.fill_pivot(i, &x), node->pivotkeys.fill_pivot(i + 1, &y));
+        int compare = compare_pairs(ft, node->pivotkeys.fill_pivot(i, &x), node->pivotkeys.fill_pivot(i + 1, &y));
         VERIFY_ASSERTION(compare < 0, i, "Value is >= the next value");
     }
     // Verify that all the pivot keys are lesser_pivot < pivot <= greatereq_pivot
     for (int i = 0; i < node->n_children-1; i++) {
         DBT x;
         if (lesser_pivot) {
-            int compare = compare_pairs(ft_handle, lesser_pivot, node->pivotkeys.fill_pivot(i, &x));
+            int compare = compare_pairs(ft, lesser_pivot, node->pivotkeys.fill_pivot(i, &x));
             VERIFY_ASSERTION(compare < 0, i, "Pivot is >= the lower-bound pivot");
         }
         if (greatereq_pivot) {
-            int compare = compare_pairs(ft_handle, greatereq_pivot, node->pivotkeys.fill_pivot(i, &x));
+            int compare = compare_pairs(ft, greatereq_pivot, node->pivotkeys.fill_pivot(i, &x));
             VERIFY_ASSERTION(compare >= 0, i, "Pivot is < the upper-bound pivot");
         }
     }
@@ -372,11 +379,11 @@ toku_verify_ftnode_internal(FT_HANDLE ft_handle,
         if (node->height > 0) {
             NONLEAF_CHILDINFO bnc = BNC(node, i);
             // Verify that messages in the buffers are in the right place.
-            VERIFY_ASSERTION(verify_sorted_by_key_msn(ft_handle, &bnc->msg_buffer, bnc->fresh_message_tree) == 0, i, "fresh_message_tree");
-            VERIFY_ASSERTION(verify_sorted_by_key_msn(ft_handle, &bnc->msg_buffer, bnc->stale_message_tree) == 0, i, "stale_message_tree");
+            VERIFY_ASSERTION(verify_sorted_by_key_msn(ft, &bnc->msg_buffer, bnc->fresh_message_tree) == 0, i, "fresh_message_tree");
+            VERIFY_ASSERTION(verify_sorted_by_key_msn(ft, &bnc->msg_buffer, bnc->stale_message_tree) == 0, i, "stale_message_tree");
 
-            verify_msg_fn verify_msg(ft_handle, bnc, curr_less_pivot, curr_geq_pivot,
-                                     blocknum, this_msn, verbose, keep_going_on_failure, messages_have_been_moved);
+            verify_msg_fn verify_msg(ft, bnc, curr_less_pivot, curr_geq_pivot,
+                                     blocknum, this_msn, verbose, keep_going_on_failure, messages_have_been_moved, verify_msn);
             int r = bnc->msg_buffer.iterate(verify_msg);
             if (r != 0) { result = r; goto done; }
 
@@ -405,19 +412,20 @@ toku_verify_ftnode_internal(FT_HANDLE ft_handle,
         else {
             BASEMENTNODE bn = BLB(node, i);
             for (uint32_t j = 0; j < bn->data_buffer.num_klpairs(); j++) {
-                VERIFY_ASSERTION((rootmsn.msn >= this_msn.msn), 0, "leaf may have latest msn, but cannot be greater than root msn");
+                if (verify_msn)
+                    VERIFY_ASSERTION((rootmsn.msn >= this_msn.msn), 0, "leaf may have latest msn, but cannot be greater than root msn");
                 DBT kdbt = get_ith_key_dbt(bn, j);
                 if (curr_less_pivot) {
-                    int compare = compare_pairs(ft_handle, curr_less_pivot, &kdbt);
+                    int compare = compare_pairs(ft, curr_less_pivot, &kdbt);
                     VERIFY_ASSERTION_BASEMENT(compare < 0, i, j, "The leafentry is >= the lower-bound pivot");
                 }
                 if (curr_geq_pivot) {
-                    int compare = compare_pairs(ft_handle, curr_geq_pivot, &kdbt);
+                    int compare = compare_pairs(ft, curr_geq_pivot, &kdbt);
                     VERIFY_ASSERTION_BASEMENT(compare >= 0, i, j, "The leafentry is < the upper-bound pivot");
                 }
                 if (0 < j) {
                     DBT prev_key_dbt = get_ith_key_dbt(bn, j-1);
-                    int compare = compare_pairs(ft_handle, &prev_key_dbt, &kdbt);
+                    int compare = compare_pairs(ft, &prev_key_dbt, &kdbt);
                     VERIFY_ASSERTION_BASEMENT(compare < 0, i, j, "Adjacent leafentries are out of order");
                 }
             }
@@ -431,7 +439,7 @@ done:
 
 // input is a pinned node, on exit, node is unpinned
 int
-toku_verify_ftnode (FT_HANDLE ft_handle,
+toku_verify_ftnode (FT ft,
                     MSN rootmsn, MSN parentmsn_with_messages, bool messages_exist_above,
                      FTNODE node, int height,
                      const DBT *lesser_pivot,               // Everything in the subtree should be > lesser_pivot.  (lesser_pivot==NULL if there is no lesser pivot.)
@@ -451,16 +459,16 @@ toku_verify_ftnode (FT_HANDLE ft_handle,
         // Otherwise we'll just do the next call
 
         result = toku_verify_ftnode_internal(
-                ft_handle, rootmsn, parentmsn_with_messages, messages_exist_above, node, height, lesser_pivot, greatereq_pivot,
-                verbose, keep_going_on_failure, false);
+                 ft, rootmsn, parentmsn_with_messages, messages_exist_above, node, height, lesser_pivot, greatereq_pivot,
+                 verbose, keep_going_on_failure, false, true);
         if (result != 0 && (!keep_going_on_failure || result != TOKUDB_NEEDS_REPAIR)) goto done;
     }
     if (node->height > 0) {
-        toku_move_ftnode_messages_to_stale(ft_handle->ft, node);
+        toku_move_ftnode_messages_to_stale(ft, node);
     }
     result2 = toku_verify_ftnode_internal(
-            ft_handle, rootmsn, parentmsn_with_messages, messages_exist_above, node, height, lesser_pivot, greatereq_pivot,
-            verbose, keep_going_on_failure, true);
+            ft, rootmsn, parentmsn_with_messages, messages_exist_above, node, height, lesser_pivot, greatereq_pivot,
+            verbose, keep_going_on_failure, true, true);
     if (result == 0) {
         result = result2;
         if (result != 0 && (!keep_going_on_failure || result != TOKUDB_NEEDS_REPAIR)) goto done;
@@ -470,9 +478,9 @@ toku_verify_ftnode (FT_HANDLE ft_handle,
     if (recurse && node->height > 0) {
         for (int i = 0; i < node->n_children; i++) {
             FTNODE child_node;
-            toku_get_node_for_verify(BP_BLOCKNUM(node, i), ft_handle, &child_node);
+            toku_get_node_for_verify(BP_BLOCKNUM(node, i), ft, &child_node);
             DBT x, y;
-            int r = toku_verify_ftnode(ft_handle, rootmsn,
+            int r = toku_verify_ftnode(ft, rootmsn,
                                        (toku_bnc_n_entries(BNC(node, i)) > 0
                                         ? this_msn
                                         : parentmsn_with_messages),
@@ -489,10 +497,10 @@ toku_verify_ftnode (FT_HANDLE ft_handle,
         }
     }
 done:
-    toku_unpin_ftnode(ft_handle->ft, node);
+    toku_unpin_ftnode(ft, node);
     
     if (result == 0 && progress_callback) 
-    result = progress_callback(progress_extra, 0.0);
+        result = progress_callback(progress_extra, 0.0);
     
     return result;
 }
@@ -505,9 +513,9 @@ toku_verify_ft_with_progress (FT_HANDLE ft_handle, int (*progress_callback)(void
         uint32_t root_hash;
         CACHEKEY root_key;
         toku_calculate_root_offset_pointer(ft_handle->ft, &root_key, &root_hash);
-        toku_get_node_for_verify(root_key, ft_handle, &root_node);
+        toku_get_node_for_verify(root_key, ft_handle->ft, &root_node);
     }
-    int r = toku_verify_ftnode(ft_handle, ft_handle->ft->h->max_msn_in_ft, ft_handle->ft->h->max_msn_in_ft, false, root_node, -1, NULL, NULL, progress_callback, progress_extra, 1, verbose, keep_on_going);
+    int r = toku_verify_ftnode(ft_handle->ft, ft_handle->ft->h->max_msn_in_ft, ft_handle->ft->h->max_msn_in_ft, false, root_node, -1, NULL, NULL, progress_callback, progress_extra, 1, verbose, keep_on_going);
     if (r == 0) {
         toku_ft_lock(ft_handle->ft);
         ft_handle->ft->h->time_of_last_verification = time(NULL);
@@ -522,76 +530,25 @@ toku_verify_ft (FT_HANDLE ft_handle) {
     return toku_verify_ft_with_progress(ft_handle, NULL, NULL, 0, 0);
 }
 
-#undef VERIFY_ASSERTION
-#define VERIFY_ASSERTION(predicate, i, string) ({                                                                              \
-    if(!(predicate)) {                                                                                                         \
-        fprintf(stderr, "%s:%d: Looking at child %d of block %" PRId64 ": %s\n", __FILE__, __LINE__, i, blocknum.b, string);   \
-        assert(0); \
-    }})
 
-#undef VERIFY_ASSERTION_BASEMENT
-#define VERIFY_ASSERTION_BASEMENT(predicate, bn, entry, string) ({           \
-    if(!(predicate)) {                                                                                                         \
-        fprintf(stderr, "%s:%d: Looking at block %" PRId64 " bn %d entry %d: %s\n", __FILE__, __LINE__, blocknum.b, bn, entry, string); \
-        assert(0); \
-    }})
-
-static int compare_pairs (FT ft, const DBT *a, const DBT *b) {
-    return ft->cmp(a, b);
-}
-
-void toku_verify_ftnode(FT ft, FTNODE node) {
+void toku_verify_ftnode(FT ft, FTNODE node, const char *file, unsigned line) {
     toku_ftnode_assert_fully_in_memory(node);
 
     if (!ft->cmp.valid())
         return;
 
-    BLOCKNUM blocknum = node->blocknum;
-    const DBT *lesser_pivot = nullptr;
-    const DBT *greatereq_pivot = nullptr;
-
-    // Verify that all the pivot keys are in order.
-    for (int i = 0; i < node->n_children-2; i++) {
-        DBT x, y;
-        int compare = compare_pairs(ft, node->pivotkeys.fill_pivot(i, &x), node->pivotkeys.fill_pivot(i + 1, &y));
-        VERIFY_ASSERTION(compare < 0, i, "Value is >= the next value");
-    }
-
-    // Verify that all the pivot keys are lesser_pivot < pivot <= greatereq_pivot
-    for (int i = 0; i < node->n_children-1; i++) {
-        DBT x;
-        if (lesser_pivot) {
-            int compare = compare_pairs(ft, lesser_pivot, node->pivotkeys.fill_pivot(i, &x));
-            VERIFY_ASSERTION(compare < 0, i, "Pivot is >= the lower-bound pivot");
-        }
-        if (greatereq_pivot) {
-            int compare = compare_pairs(ft, greatereq_pivot, node->pivotkeys.fill_pivot(i, &x));
-            VERIFY_ASSERTION(compare >= 0, i, "Pivot is < the upper-bound pivot");
-        }
-    }
-
-    for (int i = 0; i < node->n_children; i++) {
-        DBT x, y;
-        const DBT *curr_less_pivot = (i==0) ? lesser_pivot : node->pivotkeys.fill_pivot(i - 1, &x);
-        const DBT *curr_geq_pivot = (i==node->n_children-1) ? greatereq_pivot : node->pivotkeys.fill_pivot(i, &y);
-        if (node->height == 0) {
-            BASEMENTNODE bn = BLB(node, i);
-            for (uint32_t j = 0; j < bn->data_buffer.num_klpairs(); j++) {
-                DBT kdbt = get_ith_key_dbt(bn, j);
-                if (curr_less_pivot) {
-                    int compare = compare_pairs(ft, curr_less_pivot, &kdbt);
-                    VERIFY_ASSERTION_BASEMENT(compare < 0, i, j, "The leafentry is >= the lower-bound pivot");
-                }
-                if (curr_geq_pivot) {
-                    int compare = compare_pairs(ft, curr_geq_pivot, &kdbt);
-                    VERIFY_ASSERTION_BASEMENT(compare >= 0, i, j, "The leafentry is < the upper-bound pivot");
-                }
-                if (0 < j) {
-                    DBT prev_key_dbt = get_ith_key_dbt(bn, j-1);
-                    int compare = compare_pairs(ft, &prev_key_dbt, &kdbt);
-                    VERIFY_ASSERTION_BASEMENT(compare < 0, i, j, "Adjacent leafentries are out of order");
-                }
-            }
-        }
+    int r = toku_verify_ftnode_internal(ft,
+                                        ZERO_MSN, ZERO_MSN, false,
+                                        node,
+                                        node->height,
+                                        nullptr,
+                                        nullptr,
+                                        true,
+                                        true,
+                                        false,
+                                        false);
+    if (r != 0) {
+        fprintf(stderr, "%s failed %d %s %u\n", __FUNCTION__, r, file, line);
+        assert_zero(r);
     }
 }
