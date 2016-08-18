@@ -78,7 +78,7 @@ public:
 
     // effect: Resets the lock request parameters, allowing it to be reused.
     // requires: Lock request was already created at some point
-    void set(locktree *lt, TXNID txnid, const DBT *left_key, const DBT *right_key, type lock_type, bool big_txn);
+    void set(locktree *lt, TXNID txnid, const DBT *left_key, const DBT *right_key, type lock_type, bool big_txn, void *extra = nullptr);
 
     // effect: Tries to acquire a lock described by this lock request.
     // returns: The return code of locktree::acquire_[write,read]_lock()
@@ -113,6 +113,10 @@ public:
 
     void set_start_test_callback(void (*f)(void));
     void set_retry_test_callback(void (*f)(void));
+
+    void *get_extra(void) const;
+
+    static void kill_waiter(locktree *lt, void *extra);
 private:
 
     enum state {
@@ -151,6 +155,8 @@ private:
     // the lock request info state stored in the
     // locktree that this lock request is for.
     struct lt_lock_request_info *m_info;
+
+    void *m_extra;
 
     // effect: tries again to acquire the lock described by this lock request
     // returns: 0 if retrying the request succeeded and is now complete
