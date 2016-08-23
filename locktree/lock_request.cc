@@ -204,6 +204,11 @@ int lock_request::wait(uint64_t wait_time_ms, uint64_t killed_time_ms, int (*kil
 
     toku_mutex_lock(&m_info->mutex);
 
+    // check again, this time locking out other retry calls
+    if (m_state == state::PENDING) {
+        retry();
+    }
+
     while (m_state == state::PENDING) {
 
         // compute next wait time
