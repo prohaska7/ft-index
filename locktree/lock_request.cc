@@ -351,6 +351,12 @@ void *lock_request::get_extra(void) const {
     return m_extra;
 }
 
+void lock_request::kill_waiter(void) {
+    remove_from_lock_requests();
+    complete(DB_LOCK_NOTGRANTED);
+    toku_cond_broadcast(&m_wait_cond);
+}
+
 void lock_request::kill_waiter(locktree *lt, void *extra) {
     lt_lock_request_info *info = lt->get_lock_request_info();
     toku_mutex_lock(&info->mutex);
@@ -358,8 +364,7 @@ void lock_request::kill_waiter(locktree *lt, void *extra) {
         lock_request *request;
         int r = info->pending_lock_requests.fetch(i, &request);
         if (r == 0 && request->get_extra() == extra) {
-            request->remove_from_lock_requests();
-            request->complete(DB_LOCK_NOTGRANTED);
+            request->kill_waiter();
             break;
         }
     }

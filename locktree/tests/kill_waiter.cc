@@ -13,7 +13,7 @@
 namespace toku {
 
 const uint64_t my_lock_wait_time = 1000 * 1000;
-const uint64_t my_killed_time = 100;
+const uint64_t my_killed_time = 500 * 1000;
 const int n_locks = 4;
 
 static int my_killed_callback(void) {
@@ -72,6 +72,7 @@ static void test_kill_waiter(void) {
         assert(!done[i]);
     }
 
+    sleep(1);
     for (int i = 0; i < n_locks-1; i++) {
         mgr.kill_waiter(&waiters[i]);
         while (!done[i]) sleep(1);

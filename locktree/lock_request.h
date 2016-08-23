@@ -116,6 +116,7 @@ public:
 
     void *get_extra(void) const;
 
+    void kill_waiter(void);
     static void kill_waiter(locktree *lt, void *extra);
 private:
 
