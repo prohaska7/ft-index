@@ -59,7 +59,7 @@ static void test_start_release_wait(void) {
 
     // a releases its lock
     locktree_release_lock(lt, 1, one, one);
-   
+
     // b waits for one, gets locks immediately
     r = b.wait(my_lock_wait_time, my_killed_time, my_killed_callback);
     assert(r == 0);
@@ -69,7 +69,7 @@ static void test_start_release_wait(void) {
 
     a.destroy();
     b.destroy();
-    
+
     mgr.release_lt(lt);
     mgr.destroy();
 }
