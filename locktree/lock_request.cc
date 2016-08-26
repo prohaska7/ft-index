@@ -210,6 +210,12 @@ int lock_request::wait(uint64_t wait_time_ms, uint64_t killed_time_ms, int (*kil
     }
 
     while (m_state == state::PENDING) {
+        // check if this thread is killed
+        if (killed_callback && killed_callback()) {
+            remove_from_lock_requests();
+            complete(DB_LOCK_NOTGRANTED);
+            break;
+        }
 
         // compute next wait time
         uint64_t t_wait;
@@ -227,7 +233,7 @@ int lock_request::wait(uint64_t wait_time_ms, uint64_t killed_time_ms, int (*kil
         invariant(r == 0 || r == ETIMEDOUT);
 
         t_now = toku_current_time_microsec();
-        if (m_state == state::PENDING && (t_now >= t_end || (killed_callback && killed_callback()))) {
+        if (m_state == state::PENDING && t_now >= t_end) {
             m_info->counters.timeout_count += 1;
             
             // if we're still pending and we timed out, then remove our
@@ -280,13 +286,15 @@ TXNID lock_request::get_conflicting_txnid(void) const {
 }
 
 int lock_request::retry(void) {
+    invariant(m_state == state::PENDING);
     int r;
 
-    invariant(m_state == state::PENDING);
+    txnid_set conflicts;
+    conflicts.create();
     if (m_type == type::WRITE) {
-        r = m_lt->acquire_write_lock(m_txnid, m_left_key, m_right_key, nullptr, m_big_txn);
+        r = m_lt->acquire_write_lock(m_txnid, m_left_key, m_right_key, &conflicts, m_big_txn);
     } else {
-        r = m_lt->acquire_read_lock(m_txnid, m_left_key, m_right_key, nullptr, m_big_txn);
+        r = m_lt->acquire_read_lock(m_txnid, m_left_key, m_right_key, &conflicts, m_big_txn);
     }
 
     // if the acquisition succeeded then remove ourselves from the
@@ -296,7 +304,10 @@ int lock_request::retry(void) {
         complete(r);
         if (m_retry_test_callback) m_retry_test_callback(); // test callback
         toku_cond_broadcast(&m_wait_cond);
+    } else {
+        m_conflicting_txnid = conflicts.get(0);
     }
+    conflicts.destroy();
 
     return r;
 }

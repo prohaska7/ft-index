@@ -17,10 +17,15 @@
 namespace toku {
 
 const uint64_t my_lock_wait_time = 1000 * 1000;
-const uint64_t my_killed_time = 1;
+const uint64_t my_killed_time = 1 * 1000;
+
+static uint64_t t_wait;
 
 static int my_killed_callback(void) {
-    abort();
+    uint64_t t_now = toku_current_time_microsec();
+    assert(t_now >= t_wait);
+    if (t_now - t_wait >= my_killed_time)
+        abort();
     return 0;
 }
 
@@ -61,6 +66,7 @@ static void test_start_release_wait(void) {
     locktree_release_lock(lt, 1, one, one);
 
     // b waits for one, gets locks immediately
+    t_wait = toku_current_time_microsec();
     r = b.wait(my_lock_wait_time, my_killed_time, my_killed_callback);
     assert(r == 0);
 
