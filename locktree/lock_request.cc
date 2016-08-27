@@ -214,7 +214,7 @@ int lock_request::wait(uint64_t wait_time_ms, uint64_t killed_time_ms, int (*kil
         if (killed_callback && killed_callback()) {
             remove_from_lock_requests();
             complete(DB_LOCK_NOTGRANTED);
-            break;
+            continue;
         }
 
         // compute next wait time
