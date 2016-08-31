@@ -291,4 +291,9 @@
     ...
     fun:_dl_init
 }
-
+{
+    lz_encoder_prepare_cond_suppression_for_xz_4.999.9beta
+    Memcheck:Cond
+    fun:lz_encoder_prepare
+    fun:lzma_lz_encoder_init
+}
