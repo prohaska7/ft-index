@@ -315,50 +315,40 @@ int lock_request::retry(void) {
 void lock_request::retry_all_lock_requests(locktree *lt) {
     lt_lock_request_info *info = lt->get_lock_request_info();
 
-    // if a thread reads this bit to be true, then it should go ahead and
-    // take the locktree mutex and retry lock requests. we use this bit
-    // to prevent every single thread from waiting on the locktree mutex
-    // in order to retry requests, especially when no requests actually exist.
-    //
-    // it is important to note that this bit only provides an optimization.
-    // it is not problematic for it to be true when it should be false,
-    // but it can be problematic for it to be false when it should be true.
-    // therefore, the lock request code must ensures that when lock requests
-    // are added to this locktree, the bit is set.
-    // see lock_request::insert_into_lock_requests()
-    if (!info->should_retry_lock_requests) {
+    info->retry_want++;
+#if 0
+    // if there are no pending lock requests than there is nothing to do
+    // do a lockless check for empty.  1 -> empty, 0 -> not empty, -1 -> dont know
+    if (info->pending_lock_requests.maybe_is_empty_unlocked() == 1)
         return;
-    }
+#endif
 
     toku_mutex_lock(&info->mutex);
 
-    // let other threads know that they need not retry lock requests at this time.
-    //
-    // the motivation here is that if a bunch of threads have already released
-    // their locks in the rangetree, then its probably okay for only one thread
-    // to iterate over the list of requests and retry them. otherwise, at high
-    // thread counts and a large number of pending lock requests, you could
-    // end up wasting a lot of cycles.
-    info->should_retry_lock_requests = false;
+    // here is the group retry algorithm.
+    // get the latest retry_want count and use it as the generation number of this retry operation.
+    // if this retry generation is > the last retry generation, then do the lock retries.  otherwise,
+    // no lock retries are needed.
+    unsigned long long retry_gen = info->retry_want.load();
+    if (retry_gen > info->retry_done) {
 
-    size_t i = 0;
-    while (i < info->pending_lock_requests.size()) {
-        lock_request *request;
-        int r = info->pending_lock_requests.fetch(i, &request);
-        invariant_zero(r);
+        // retry all of the pending lock requests.
+        for (size_t i = 0; i < info->pending_lock_requests.size(); ) {
+            lock_request *request;
+            int r = info->pending_lock_requests.fetch(i, &request);
+            invariant_zero(r);
 
-        // retry the lock request. if it didn't succeed,
-        // move on to the next lock request. otherwise
-        // the request is gone from the list so we may
-        // read the i'th entry for the next one.
-        r = request->retry();
-        if (r != 0) {
-            i++;
+            // retry this lock request. if it didn't succeed,
+            // move on to the next lock request. otherwise
+            // the request is gone from the list so we may
+            // read the i'th entry for the next one.
+            r = request->retry();
+            if (r != 0) {
+                i++;
+            }
         }
+        info->retry_done = retry_gen;
     }
-
-    // future threads should only retry lock requests if some still exist
-    info->should_retry_lock_requests = info->pending_lock_requests.size() > 0;
 
     toku_mutex_unlock(&info->mutex);
 }
@@ -405,9 +395,6 @@ void lock_request::insert_into_lock_requests(void) {
     invariant(r == DB_NOTFOUND);
     r = m_info->pending_lock_requests.insert_at(this, idx);
     invariant_zero(r);
-
-    // ensure that this bit is true, now that at least one lock request is in the set
-    m_info->should_retry_lock_requests = true;
 }
 
 // remove this lock request from the locktree's set. must hold the mutex.

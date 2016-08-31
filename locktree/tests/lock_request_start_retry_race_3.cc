@@ -38,38 +38,32 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 
 #include <iostream>
 #include <thread>
+#include <pthread.h>
 #include "test.h"
 #include "locktree.h"
 #include "lock_request.h"
 
-// Test FT-633, the data race on the lock request between ::start and ::retry
-// This test is non-deterministic.  It uses sleeps at 2 critical places to
-// expose the data race on the lock requests state.
+// Expose the race to retry lock requests.  With 3 threads, the old algorithm would miss
+// a lock acquistion and cause a lock request timeout eventually.  The group retry algorithm
+// ensures that all released locks are retried.
 
 namespace toku {
 
-static void locker_callback(void) {
-    usleep(10000);
-}
-
-static void run_locker(locktree *lt, TXNID txnid, const DBT *key) {
-    int i;
-    for (i = 0; i < 1000; i++) {
-
+static void run_locker(locktree *lt, TXNID txnid, const DBT *key, pthread_barrier_t *b) {
+    for (int i = 0; i < 10000; i++) {
+        int r;
+        r = pthread_barrier_wait(b); assert(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD);
+        
         lock_request request;
         request.create();
 
         request.set(lt, txnid, key, key, lock_request::type::WRITE, false);
 
-        // set the test callbacks
-        request.set_start_test_callback(locker_callback);
-        request.set_retry_test_callback(locker_callback);
-
         // try to acquire the lock
-        int r = request.start();
+        r = request.start();
         if (r == DB_LOCK_NOTGRANTED) {
             // wait for the lock to be granted
-            r = request.wait(10 * 1000);
+            r = request.wait(1000 * 1000);
         }
 
         if (r == 0) {
@@ -103,15 +97,17 @@ int main(void) {
 
     const DBT *one = toku::get_dbt(1);
 
-    const int n_workers = 2;
+    const int n_workers = 3;
     std::thread worker[n_workers];
+    pthread_barrier_t b;
+    int r = pthread_barrier_init(&b, nullptr, n_workers); assert(r == 0);
     for (int i = 0; i < n_workers; i++) {
-        worker[i] = std::thread(toku::run_locker, &lt, i, one);
+        worker[i] = std::thread(toku::run_locker, &lt, i, one, &b);
     }
     for (int i = 0; i < n_workers; i++) {
         worker[i].join();
     }
-
+    r = pthread_barrier_destroy(&b); assert(r == 0);
     lt.release_reference();
     lt.destroy();
     return 0;

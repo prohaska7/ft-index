@@ -38,6 +38,8 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 
 #pragma once
 
+#include <atomic>
+
 #include <db.h>
 #include <toku_time.h>
 #include <toku_pthread.h>
@@ -81,8 +83,9 @@ namespace toku {
     struct lt_lock_request_info {
         omt<lock_request *> pending_lock_requests;
         toku_mutex_t mutex;
-        bool should_retry_lock_requests;
         lt_counters counters;
+        std::atomic_ullong retry_want;
+        unsigned long long retry_done;
     };
 
     // The locktree manager manages a set of locktrees, one for each open dictionary.
