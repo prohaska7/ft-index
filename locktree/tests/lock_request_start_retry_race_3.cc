@@ -50,7 +50,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 namespace toku {
 
 static void run_locker(locktree *lt, TXNID txnid, const DBT *key, pthread_barrier_t *b) {
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100000; i++) {
         int r;
         r = pthread_barrier_wait(b); assert(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD);
         

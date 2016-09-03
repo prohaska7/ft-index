@@ -16,15 +16,15 @@
 
 namespace toku {
 
-const uint64_t my_lock_wait_time = 1000 * 1000;
-const uint64_t my_killed_time = 1 * 1000;
+const uint64_t my_lock_wait_time = 1000 * 1000; // ms
+const uint64_t my_killed_time = 1 * 1000; // ms
 
 static uint64_t t_wait;
 
 static int my_killed_callback(void) {
     uint64_t t_now = toku_current_time_microsec();
     assert(t_now >= t_wait);
-    if (t_now - t_wait >= my_killed_time)
+    if (t_now - t_wait >= my_killed_time*1000)
         abort();
     return 0;
 }
@@ -51,14 +51,14 @@ static void test_start_release_wait(void) {
     // a locks one
     lock_request a;
     a.create();
-    a.set(lt, 1, one, one, lock_request::type::WRITE, false, &a);
+    a.set(lt, 1, one, one, lock_request::type::WRITE, false);
     r = a.start();
     assert(r == 0);
 
     // b tries to lock one, fails
     lock_request b;
     b.create();
-    b.set(lt, 2, one, one, lock_request::type::WRITE, false, &b);
+    b.set(lt, 2, one, one, lock_request::type::WRITE, false);
     r = b.start();
     assert(r == DB_LOCK_NOTGRANTED);
 
