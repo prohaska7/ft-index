@@ -65,6 +65,7 @@ void lock_request::create(void) {
     toku_cond_init(&m_wait_cond, nullptr);
 
     m_start_test_callback = nullptr;
+    m_start_before_pending_test_callback = nullptr;
     m_retry_test_callback = nullptr;
 }
 
@@ -174,6 +175,7 @@ int lock_request::start(void) {
         m_state = state::PENDING;
         m_start_time = toku_current_time_microsec() / 1000;
         m_conflicting_txnid = conflicts.get(0);
+        if (m_start_before_pending_test_callback) m_start_before_pending_test_callback();
         toku_mutex_lock(&m_info->mutex);
         insert_into_lock_requests();
         if (deadlock_exists(conflicts)) {
@@ -312,7 +314,7 @@ int lock_request::retry(void) {
     return r;
 }
 
-void lock_request::retry_all_lock_requests(locktree *lt) {
+void lock_request::retry_all_lock_requests(locktree *lt, void (*after_retry_all_test_callback)(void)) {
     lt_lock_request_info *info = lt->get_lock_request_info();
 
     info->retry_want++;
@@ -347,6 +349,7 @@ void lock_request::retry_all_lock_requests(locktree *lt) {
                 i++;
             }
         }
+        if (after_retry_all_test_callback) after_retry_all_test_callback();
         info->retry_done = retry_gen;
     }
 
@@ -421,6 +424,10 @@ int lock_request::find_by_txnid(lock_request * const &request, const TXNID &txni
 
 void lock_request::set_start_test_callback(void (*f)(void)) {
     m_start_test_callback = f;
+}
+
+void lock_request::set_start_before_pending_test_callback(void (*f)(void)) {
+    m_start_before_pending_test_callback = f;
 }
 
 void lock_request::set_retry_test_callback(void (*f)(void)) {

@@ -43,33 +43,34 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 #include "locktree.h"
 #include "lock_request.h"
 
-// Suppose that 3 threads are running a lock acquire, release, retry sequence.  There is
-// a race in the retry algorithm with 2 threads running lock retry simultaneously.  The
-// first thread to run retry sets a flag that will cause the second thread to skip the
-// lock retries.  If the first thread progressed past the contended lock, then the second
-// threa will HANG until its lock timer pops, even when the contended lock is no longer held.
+// Suppose that 2 threads are running a lock acquire, release, retry sequence.  There is a
+// race between the acquire and the release with 2 threads.  If thread 1 acquires a lock,
+// and thread 2 tries to acquire the same lock and fails, thread 1 may release its lock and retry
+// pending lock requests BEFORE thread 2 adds itself to the pending lock requests.  If this
+// happens, then thread 2 will HANG until its lock timer expires even when the lock it is
+// waiting for is FREE.
 
-// This test exposes this problem as a test hang.  The group retry algorithm fixes the race
-// in the lock request retry algorihm and this test should no longer hang.
+// This test exposes this problem as a test hang.  If the race is fixed, then the test runs to
+// completion.
 
 namespace toku {
 
-// use 1000 when after_retry_all is implemented, otherwise use 100000
-static const int n_tests = 1000; // 100000;
-
-static void after_retry_all(void) {
+static void start_before_pending(void) {
     usleep(10000);
 }
 
 static void run_locker(locktree *lt, TXNID txnid, const DBT *key, pthread_barrier_t *b) {
-    for (int i = 0; i < n_tests; i++) {
+    for (int i = 0; i < 100000; i++) {
         int r;
         r = pthread_barrier_wait(b); assert(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD);
         
         lock_request request;
         request.create();
-
         request.set(lt, txnid, key, key, lock_request::type::WRITE, false);
+
+        // if the callback is included, then the race is easy to reproduce.  Otherwise, several
+        // test runs may be required before the race happens.
+        if (1) request.set_start_before_pending_test_callback(start_before_pending);
 
         // try to acquire the lock
         r = request.start();
@@ -87,7 +88,7 @@ static void run_locker(locktree *lt, TXNID txnid, const DBT *key, pthread_barrie
             buffer.destroy();
 
             // retry pending lock requests
-            lock_request::retry_all_lock_requests(lt, after_retry_all);
+            lock_request::retry_all_lock_requests(lt);
         }
 
         request.destroy();
@@ -109,7 +110,7 @@ int main(void) {
 
     const DBT *one = toku::get_dbt(1);
 
-    const int n_workers = 3;
+    const int n_workers = 2;
     std::thread worker[n_workers];
     pthread_barrier_t b;
     int r = pthread_barrier_init(&b, nullptr, n_workers); assert(r == 0);

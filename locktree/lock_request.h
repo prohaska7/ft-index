@@ -109,17 +109,18 @@ public:
     // effect: Retries all of the lock requests for the given locktree.
     //         Any lock requests successfully restarted is completed and woken up.
     //         The rest remain pending.
-    static void retry_all_lock_requests(locktree *lt);
+    static void retry_all_lock_requests(locktree *lt, void (*after_retry_test_callback)(void) = nullptr);
 
     void set_start_test_callback(void (*f)(void));
+    void set_start_before_pending_test_callback(void (*f)(void));
     void set_retry_test_callback(void (*f)(void));
 
     void *get_extra(void) const;
 
     void kill_waiter(void);
     static void kill_waiter(locktree *lt, void *extra);
-private:
 
+private:
     enum state {
         UNINITIALIZED,
         INITIALIZED,
@@ -194,6 +195,7 @@ private:
     static int find_by_txnid(lock_request * const &request, const TXNID &txnid);
 
     void (*m_start_test_callback)(void);
+    void (*m_start_before_pending_test_callback)(void);
     void (*m_retry_test_callback)(void);
 
     friend class lock_request_unit_test;
