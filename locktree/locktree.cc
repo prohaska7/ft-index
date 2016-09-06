@@ -81,10 +81,14 @@ void locktree::create(locktree_manager *mgr, DICTIONARY_ID dict_id, const compar
     m_sto_end_early_time = 0;
 
     m_lock_request_info.pending_lock_requests.create();
+    m_lock_request_info.pending_is_empty = true;
     ZERO_STRUCT(m_lock_request_info.mutex);
     toku_mutex_init(&m_lock_request_info.mutex, nullptr);
     m_lock_request_info.retry_want = m_lock_request_info.retry_done = 0;
     ZERO_STRUCT(m_lock_request_info.counters);
+
+    TOKU_VALGRIND_HG_DISABLE_CHECKING(&m_lock_request_info.pending_is_empty, sizeof(m_lock_request_info.pending_is_empty));
+    TOKU_DRD_IGNORE_VAR(m_lock_request_info.pending_is_empty);
 }
 
 void locktree::destroy(void) {

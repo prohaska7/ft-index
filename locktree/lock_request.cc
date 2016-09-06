@@ -318,12 +318,12 @@ void lock_request::retry_all_lock_requests(locktree *lt, void (*after_retry_all_
     lt_lock_request_info *info = lt->get_lock_request_info();
 
     info->retry_want++;
-#if 0
+
     // if there are no pending lock requests than there is nothing to do
-    // do a lockless check for empty.  1 -> empty, 0 -> not empty, -1 -> dont know
-    if (info->pending_lock_requests.maybe_is_empty_unlocked() == 1)
+    // the unlocked data race on pending_is_empty is OK since lock requests
+    // are retried after added to the pending set.
+    if (info->pending_is_empty)
         return;
-#endif
 
     toku_mutex_lock(&info->mutex);
 
@@ -398,6 +398,7 @@ void lock_request::insert_into_lock_requests(void) {
     invariant(r == DB_NOTFOUND);
     r = m_info->pending_lock_requests.insert_at(this, idx);
     invariant_zero(r);
+    m_info->pending_is_empty = false;
 }
 
 // remove this lock request from the locktree's set. must hold the mutex.
@@ -409,6 +410,8 @@ void lock_request::remove_from_lock_requests(void) {
     invariant(request == this);
     r = m_info->pending_lock_requests.delete_at(idx);
     invariant_zero(r);
+    if (m_info->pending_lock_requests.size() == 0)
+        m_info->pending_is_empty = true;
 }
 
 int lock_request::find_by_txnid(lock_request * const &request, const TXNID &txnid) {

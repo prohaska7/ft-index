@@ -82,6 +82,7 @@ namespace toku {
     // Lock request state for some locktree
     struct lt_lock_request_info {
         omt<lock_request *> pending_lock_requests;
+        std::atomic_bool pending_is_empty;
         toku_mutex_t mutex;
         lt_counters counters;
         std::atomic_ullong retry_want;
