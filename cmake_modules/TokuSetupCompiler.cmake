@@ -61,12 +61,14 @@ endmacro(set_cflags_if_supported_named)
 ## adds a compiler flag if the compiler supports it
 macro(set_cflags_if_supported)
   foreach(flag ${ARGN})
-    check_c_compiler_flag(${flag} HAVE_C_${flag})
-    if (HAVE_C_${flag})
+    string(REGEX REPLACE "=" "_" flag_name ${flag})
+    string(REGEX REPLACE "-" "_" flag_name ${flag_name})
+    check_c_compiler_flag(${flag} HAVE_C_${flag_name})
+    if (HAVE_C_${flag_name})
       set(CMAKE_C_FLAGS "${flag} ${CMAKE_C_FLAGS}")
     endif ()
-    check_cxx_compiler_flag(${flag} HAVE_CXX_${flag})
-    if (HAVE_CXX_${flag})
+    check_cxx_compiler_flag(${flag} HAVE_CXX_${flag_name})
+    if (HAVE_CXX_${flag_name})
       set(CMAKE_CXX_FLAGS "${flag} ${CMAKE_CXX_FLAGS}")
     endif ()
   endforeach(flag)
@@ -96,12 +98,11 @@ set_cflags_if_supported(
   -Wno-error=address-of-array-temporary
   -Wno-error=tautological-constant-out-of-range-compare
   -Wno-error=maybe-uninitialized
-  -Wno-ignored-attributes
   -Wno-error=extern-c-compat
-  -Wno-pointer-bool-conversion
   -fno-rtti
   -fno-exceptions
   -Wno-error=nonnull-compare
+  -Wno-error=undef
   )
 ## set_cflags_if_supported_named("-Weffc++" -Weffcpp)
 
