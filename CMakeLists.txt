@@ -1,3 +1,5 @@
+# turn off PFS code for now.  unsetting the following variable is the magic.
+unset(MYSQL_PROJECT_NAME_DOCSTRING)
 if (CMAKE_PROJECT_NAME STREQUAL TokuDB)
   cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 endif()
