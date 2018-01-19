@@ -91,6 +91,8 @@ endif()
 ## missing-format-attribute causes warnings in some MySQL include files
 ## if the library is built as a part of TokuDB MySQL storage engine
 set_cflags_if_supported(
+  -Wundef
+  -Werror=unused-parameter
   -Wno-missing-field-initializers
   -Wstrict-null-sentinel
   -Winit-self
