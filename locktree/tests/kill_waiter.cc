@@ -8,7 +8,6 @@
 #include "test.h"
 #include "locktree_unit_test.h"
 #include <thread>
-#include <atomic>
 
 namespace toku {
 
@@ -29,7 +28,7 @@ static void locktree_release_lock(locktree *lt, TXNID txn_id, const DBT *left, c
     buffer.destroy();
 }
 
-static void wait_lock(lock_request *lr, std::atomic_int *done) {
+static void wait_lock(lock_request *lr, std::atomic<int> *done) {
     int r = lr->wait(my_lock_wait_time, my_killed_time, my_killed_callback);
     assert(r == DB_LOCK_NOTGRANTED);
     *done = 1;
@@ -62,7 +61,7 @@ static void test_kill_waiter(void) {
         assert(r == DB_LOCK_NOTGRANTED);
     }
 
-    std::atomic_int done[n_locks-1];
+    std::atomic<int> done[n_locks-1];
     for (int i = 0; i < n_locks-1; i++) {
         done[i] = 0;
         waiters[i] = std::thread(wait_lock, &locks[i], &done[i]);
