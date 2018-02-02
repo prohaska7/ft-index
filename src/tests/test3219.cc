@@ -130,7 +130,7 @@ finish (void) {
 }
 
 
-volatile int finished = false;
+std::atomic<int> finished = { false };
 
 // Thread A performs checkpoints
 static void*
