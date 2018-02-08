@@ -54,7 +54,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 volatile uint64_t the_counter = 0;
 
 static int UU() nop(DB_TXN* UU(txn), ARG UU(arg), void* UU(operation_extra), void *UU(stats_extra)) {
-    the_counter++;
+    toku_sync_fetch_and_add(&the_counter, 1);
     return 0;
 }
 

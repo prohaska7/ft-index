@@ -51,7 +51,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 
 // Measure the throughput of incrementing a status variable on multiple threads.
 
-volatile uint64_t the_counter = 0;
+std::atomic<uint64_t> the_counter (0);
 
 static int UU() nop(DB_TXN* UU(txn), ARG UU(arg), void* UU(operation_extra), void *UU(stats_extra)) {
     the_counter++;
