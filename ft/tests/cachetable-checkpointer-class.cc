@@ -74,12 +74,10 @@ static void init_cachefile(CACHEFILE cf, int which_cf, bool for_checkpoint) {
 // Description:
 //
 void checkpointer_test::test_begin_checkpoint() {
-    cachefile_list cfl;
-    ZERO_STRUCT(cfl);
+    cachefile_list cfl = {};
     cfl.init();
 
-    cachetable ctbl;
-    ZERO_STRUCT(ctbl);
+    cachetable ctbl = {};
     ctbl.list.init();
 
     ZERO_STRUCT(m_cp);
@@ -125,12 +123,10 @@ void checkpointer_test::test_begin_checkpoint() {
 // Description:
 //
 void checkpointer_test::test_pending_bits() {
-    cachefile_list cfl;
-    ZERO_STRUCT(cfl);
+    cachefile_list cfl = {};
     cfl.init();
 
-    cachetable ctbl;
-    ZERO_STRUCT(ctbl);
+    cachetable ctbl = {};
     ctbl.list.init();
 
     ZERO_STRUCT(m_cp);
@@ -278,12 +274,10 @@ static uint32_t get_number_pending_pairs(pair_list *list)
 //
 void checkpointer_test::test_end_checkpoint() {
     // 1. Init test.
-    cachetable ctbl;
-    ZERO_STRUCT(ctbl);
+    cachetable ctbl = {};
     ctbl.list.init();
 
-    cachefile_list cfl;
-    ZERO_STRUCT(cfl);
+    cachefile_list cfl = {};
     cfl.init();
 
     struct cachefile cf;
