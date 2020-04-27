@@ -195,7 +195,7 @@ namespace toku {
 
         // tracks the current number of locks and lock memory
         uint64_t m_max_lock_memory;
-        uint64_t m_current_lock_memory;
+        std::atomic_uint64_t m_current_lock_memory;
 
         struct lt_counters m_lt_counters;
 
@@ -332,7 +332,7 @@ namespace toku {
     private:
         locktree_manager *m_mgr;
         DICTIONARY_ID m_dict_id;
-        uint32_t m_reference_count;
+        std::atomic_uint32_t m_reference_count;
 
         // Since the memory referenced by this comparator is not owned by the
         // locktree, the user must guarantee it will outlive the locktree.
@@ -428,7 +428,7 @@ namespace toku {
         // we start doing the single txind optimzation again.
         static const int STO_BUFFER_MAX_SIZE = 50 * 1024;
         static const int STO_SCORE_THRESHOLD = 100;
-        int m_sto_score;
+        std::atomic_int m_sto_score;
 
         // statistics about time spent ending the STO early
         uint64_t m_sto_end_early_count;
@@ -489,12 +489,6 @@ namespace toku {
         // Returns:
         //  true if m_sto_txnid is not TXNID_NONE
         bool sto_txnid_is_valid_unsafe(void) const;
-
-        // Effect:
-        //  Provides a hook for a helgrind suppression.
-        // Returns:
-        //  m_sto_score
-        int sto_get_score_unsafe(void )const;
 
         void remove_overlapping_locks_for_txnid(TXNID txnid,
                                                 const DBT *left_key, const DBT *right_key);
