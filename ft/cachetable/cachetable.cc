@@ -4530,8 +4530,8 @@ void checkpointer::begin_checkpoint() {
     bjm_reset(m_checkpoint_clones_bjm);
 
     m_list->write_pending_exp_lock();
-    m_list->read_list_lock();
     m_cf_list->read_lock(); // needed for update_cachefiles
+    m_list->read_list_lock();
     m_list->write_pending_cheap_lock();
     // 4. Turn on all the relevant checkpoint pending bits.
     this->turn_on_pending_bits();
