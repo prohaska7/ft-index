@@ -105,3 +105,15 @@
    drd:ConflictingAccess
    fun:_ZNK4toku8locktree25sto_txnid_is_valid_unsafeEv
 }
+{
+   ignore_std::atomic_store
+   drd:ConflictingAccess
+   fun:store
+   fun:*atomic_base*
+}
+{
+   ignore_std::atomic_load
+   drd:ConflictingAccess
+   fun:load
+   fun:*atomic_base*
+}
