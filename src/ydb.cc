@@ -2952,9 +2952,8 @@ toku_env_create(DB_ENV ** envp, uint32_t flags) {
     result->crash = env_crash;  // handlerton's call to fractal tree layer on failed assert
     result->txn_begin = toku_txn_begin;
 
-    MALLOC(result->i);
+    CALLOC(result->i);
     if (result->i == 0) { r = ENOMEM; goto cleanup; }
-    memset(result->i, 0, sizeof *result->i);
     result->i->envdir_lockfd  = -1;
     result->i->datadir_lockfd = -1;
     result->i->logdir_lockfd  = -1;
