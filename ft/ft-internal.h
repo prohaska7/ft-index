@@ -199,7 +199,7 @@ struct ft {
 
     // protected by atomic builtins
     STAT64INFO_S in_memory_stats;
-    uint64_t in_memory_logical_rows;
+    std::atomic_uint64_t in_memory_logical_rows;
 
     // transient, not serialized to disk.  updated when we do write to
     // disk.  tells us whether we can do partial eviction (we can't if

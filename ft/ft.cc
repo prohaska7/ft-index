@@ -561,7 +561,7 @@ toku_ft_init(FT ft,
              uint32_t fanout
              )
 {
-    memset(ft, 0, sizeof *ft);
+    memset((void*)ft, 0, sizeof *ft);
     struct ft_options options = {
         .nodesize = target_nodesize,
         .basementnodesize = target_basementnodesize,
@@ -911,11 +911,16 @@ void toku_ft_adjust_logical_row_count(FT ft, int64_t delta) {
     // in the ft header are set to -1 until an analyze can reset it to an
     // accurate value. Until then, the physical count from in_memory_stats
     // must be returned in toku_ft_stat64.
-    if (delta != 0 && ft->in_memory_logical_rows != (uint64_t)-1) {
-        toku_sync_fetch_and_add(&(ft->in_memory_logical_rows), delta);
-        if (ft->in_memory_logical_rows == (uint64_t)-1) {
-            toku_sync_fetch_and_add(&(ft->in_memory_logical_rows), 1);
-        }
+    if (delta != 0) {
+        uint64_t v, nv;
+        do {
+            v = ft->in_memory_logical_rows;
+            if (v == (uint64_t)-1)
+                break;
+            nv =  v + delta;
+            if (nv == (uint64_t)-1)
+                nv = 1;
+        } while (!ft->in_memory_logical_rows.compare_exchange_strong(v, nv));
     }
 }
 
