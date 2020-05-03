@@ -665,7 +665,7 @@ toku_txn_is_read_only(TOKUTXN txn) {
     // recursively logged before children.
     if (!txn->begin_was_logged) {
         // Did no work.
-        invariant(txn->roll_info.num_rollentries == 0);
+        invariant(toku_unsafe_fetch(txn->roll_info.num_rollentries) == 0);
         invariant(txn->do_fsync_lsn.lsn == ZERO_LSN.lsn);
         invariant(txn->open_fts.size() == 0);
         invariant(txn->num_pin==0);
