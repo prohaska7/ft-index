@@ -96,39 +96,13 @@ void locktree::create(locktree_manager *mgr, DICTIONARY_ID dict_id, const compar
     m_lock_request_info.init();
 }
 
-void lt_lock_request_info::init(void) {
-    pending_lock_requests.create();
-    pending_is_empty = true;
-    ZERO_STRUCT(mutex);
-    toku_mutex_init(*locktree_request_info_mutex_key, &mutex, nullptr);
-    retry_want = retry_done = 0;
-    ZERO_STRUCT(counters);
-    ZERO_STRUCT(retry_mutex);
-    toku_mutex_init(
-        *locktree_request_info_retry_mutex_key, &retry_mutex, nullptr);
-    toku_cond_init(*locktree_request_info_retry_cv_key, &retry_cv, nullptr);
-    running_retry = false;
-
-    TOKU_VALGRIND_HG_DISABLE_CHECKING(&pending_is_empty,
-                                      sizeof(pending_is_empty));
-    TOKU_DRD_IGNORE_VAR(pending_is_empty);
-}
-
 void locktree::destroy(void) {
     invariant(m_reference_count == 0);
-    invariant(m_lock_request_info.pending_lock_requests.size() == 0);
     m_cmp.destroy();
     m_rangetree->destroy();
     toku_free(m_rangetree);
     m_sto_buffer.destroy();
     m_lock_request_info.destroy();
-}
-
-void lt_lock_request_info::destroy(void) {
-    pending_lock_requests.destroy();
-    toku_mutex_destroy(&mutex);
-    toku_mutex_destroy(&retry_mutex);
-    toku_cond_destroy(&retry_cv);
 }
 
 void locktree::add_reference(void) {
@@ -754,7 +728,7 @@ void locktree::set_userdata(void *userdata) {
     m_userdata = userdata;
 }
 
-struct lt_lock_request_info *locktree::get_lock_request_info(void) {
+lock_request_info *locktree::get_lock_request_info(void) {
     return &m_lock_request_info;
 }
 
