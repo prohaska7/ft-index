@@ -77,7 +77,7 @@ namespace toku {
 
         // lock keys
         for (int i=0; i<n_lock_requests; i++) {
-            lock_requests[i].set(lt, {(uint64_t)(i+1)}, &keys[i].dbt, &keys[i].dbt,
+            lock_requests[i].set(lt, (TXNID) {(uint64_t)(i+1)}, &keys[i].dbt, &keys[i].dbt,
                                  lock_request::type::WRITE, false);
             r = lock_requests[i].start();
             assert(r == 0);
@@ -86,7 +86,7 @@ namespace toku {
 
         // try to lock adjacent keys
         for (int i=0; i<n_lock_requests-1; i++) {
-            lock_requests[i].set(lt, {(uint64_t)(i+1)}, &keys[i+1].dbt, &keys[i+1].dbt,
+            lock_requests[i].set(lt, (TXNID) {(uint64_t)(i+1)}, &keys[i+1].dbt, &keys[i+1].dbt,
                                  lock_request::type::WRITE, false);
             r = lock_requests[i].start();
             assert(r == DB_LOCK_NOTGRANTED);
@@ -96,7 +96,7 @@ namespace toku {
         // perf loop
         // note that deadlock detector runs in the start function
         for (int i=0; i<n_tests; i++) {
-            lock_requests[n_lock_requests-1].set(lt, {(uint64_t)(n_lock_requests)},
+            lock_requests[n_lock_requests-1].set(lt, (TXNID) {(uint64_t)(n_lock_requests)},
                                                  &keys[0].dbt, &keys[0].dbt,
                                                  lock_request::type::WRITE, false);
             r = lock_requests[n_lock_requests-1].start();
@@ -116,7 +116,7 @@ namespace toku {
             range_buffer buffer;
             buffer.create();
             buffer.append(&keys[i].dbt, &keys[i].dbt);
-            lt->release_locks({(uint64_t)(i+1)}, &buffer);
+            lt->release_locks((TXNID) {(uint64_t)(i+1)}, &buffer);
             buffer.destroy();
         }
 
