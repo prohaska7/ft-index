@@ -43,9 +43,7 @@ Copyright (c) 2006, 2015, Percona and/or its affiliates. All rights reserved.
 
 int n_lock_requests = 1;
 int n_tests = 1;
-// unfortunately, convert_to_tree function is private, but
-// insert out of order forces omt convert to tree.
-int convert_to_tree = 0;
+int convert_to_tree = 1;
 int do_iterate = 0;
 int do_pending = 1;
 
@@ -57,19 +55,17 @@ namespace toku {
 
         lock_request *lock_requests = new lock_request[n_lock_requests];
         long *extra = new long[n_lock_requests+1];
-        int m = n_lock_requests/2;
         for (int i=0; i<n_lock_requests; i++) {
             lock_requests[i].create();
             lock_requests[i].m_txnid = i;
             extra[i] = random();
             lock_requests[i].m_info = &mgr;
             lock_requests[i].m_extra = &extra[i];
-            if (!convert_to_tree || i != m)
-                mgr.add_to_pending(&lock_requests[i]);
+            mgr.add_to_pending(&lock_requests[i]);
         }
 
         if (convert_to_tree)
-            mgr.add_to_pending(&lock_requests[m]);
+            mgr.pending_lock_requests.convert_to_tree();
 
         for (int i=0; i<n_tests; i++) {
             long r = random() % n_lock_requests;
@@ -82,7 +78,8 @@ namespace toku {
                 mgr.kill_waiter_iterate(kill_extra);
             else
                 mgr.kill_waiter_fetch(kill_extra);
-            mgr.add_to_pending(&lock_requests[r]);
+            if (do_pending)
+                mgr.add_to_pending(&lock_requests[r]);
         }
 
         for (int i=0; i<n_lock_requests; i++)
