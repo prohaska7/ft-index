@@ -420,11 +420,12 @@ void lock_request_info::kill_waiter_iterate(void *extra) {
 
 void lock_request_info::get_status(uint64_t *lock_requests_pending_ptr, lock_request_counters *counters_ptr) {
     if (toku_mutex_trylock(&mutex) == 0) {
-        if (lock_requests_pending_ptr)
-            *lock_requests_pending_ptr = pending_lock_requests.size();
-        if (counters_ptr)
-            *counters_ptr = counters;
+        *lock_requests_pending_ptr = pending_lock_requests.size();
+        *counters_ptr = counters;
         toku_mutex_unlock(&mutex);
+    } else {
+        *lock_requests_pending_ptr = 0;
+        *counters_ptr = {};
     }
 }
 
