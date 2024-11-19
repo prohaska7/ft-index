@@ -1,16 +1,16 @@
 set(util_srcs
-  context
-  dbt
-  frwlock
-  kibbutz
-  memarena
-  mempool
-  minicron
-  partitioned_counter
-  queue
-  threadpool
-  scoped_malloc
-  x1764
+  context.cc
+  dbt.cc
+  frwlock.cc
+  kibbutz.cc
+  memarena.cc
+  mempool.cc
+  minicron.cc
+  partitioned_counter.cc
+  queue.cc
+  threadpool.cc
+  scoped_malloc.cc
+  x1764.cc
   )
 
 add_library(util SHARED ${util_srcs})

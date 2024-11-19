@@ -2,8 +2,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 ## generate log_code.cc, log_print.cc, log_header.cc
 set_source_files_properties(
-  "${CMAKE_CURRENT_BINARY_DIR}/log_code"
-  "${CMAKE_CURRENT_BINARY_DIR}/log_print"
+  "${CMAKE_CURRENT_BINARY_DIR}/log_code.cc"
+  "${CMAKE_CURRENT_BINARY_DIR}/log_print.cc"
   "${CMAKE_CURRENT_BINARY_DIR}/log_header.h"
   PROPERTIES GENERATED TRUE)
 
@@ -26,56 +26,56 @@ add_custom_target(
   )
 
 set(FT_SOURCES
-  bndata
-  cachetable/background_job_manager
-  cachetable/cachetable
-  cachetable/checkpoint
-  cursor
-  ft
-  ft-cachetable-wrappers
-  ft-flusher
-  ft-hot-flusher
-  ft-ops
-  ft-recount-rows
-  ft-status
-  ft-test-helpers
-  ft-verify
-  loader/callbacks
-  loader/dbufio
-  loader/loader
-  loader/pqueue
-  leafentry
-  le-cursor
-  logger/logcursor
-  logger/logfilemgr
-  logger/logger
-  logger/log_upgrade
-  logger/recover
-  msg
-  msg_buffer
-  node
-  pivotkeys
-  serialize/rbtree_mhs
-  serialize/block_allocator
-  serialize/block_table
-  serialize/compress
-  serialize/ft_node-serialize
-  serialize/ft-node-deserialize
-  serialize/ft-serialize
-  serialize/quicklz
-  serialize/sub_block
-  txn/rollback
-  txn/rollback-apply
-  txn/rollback-ct-callbacks
-  txn/rollback_log_node_cache
-  txn/roll
-  txn/txn
-  txn/txn_child_manager
-  txn/txn_manager
-  txn/xids
-  ule
-  "${CMAKE_CURRENT_BINARY_DIR}/log_code"
-  "${CMAKE_CURRENT_BINARY_DIR}/log_print"
+  bndata.cc
+  cachetable/background_job_manager.cc
+  cachetable/cachetable.cc
+  cachetable/checkpoint.cc
+  cursor.cc
+  ft.cc
+  ft-cachetable-wrappers.cc
+  ft-flusher.cc
+  ft-hot-flusher.cc
+  ft-ops.cc
+  ft-recount-rows.cc
+  ft-status.cc
+  ft-test-helpers.cc
+  ft-verify.cc
+  loader/callbacks.cc
+  loader/dbufio.cc
+  loader/loader.cc
+  loader/pqueue.cc
+  leafentry.cc
+  le-cursor.cc
+  logger/logcursor.cc
+  logger/logfilemgr.cc
+  logger/logger.cc
+  logger/log_upgrade.cc
+  logger/recover.cc
+  msg.cc
+  msg_buffer.cc
+  node.cc
+  pivotkeys.cc
+  serialize/rbtree_mhs.cc
+  serialize/block_allocator.cc
+  serialize/block_table.cc
+  serialize/compress.cc
+  serialize/ft_node-serialize.cc
+  serialize/ft-node-deserialize.cc
+  serialize/ft-serialize.cc
+  serialize/quicklz.cc
+  serialize/sub_block.cc
+  txn/rollback.cc
+  txn/rollback-apply.cc
+  txn/rollback-ct-callbacks.cc
+  txn/rollback_log_node_cache.cc
+  txn/roll.cc
+  txn/txn.cc
+  txn/txn_child_manager.cc
+  txn/txn_manager.cc
+  txn/xids.cc
+  ule.cc
+  "${CMAKE_CURRENT_BINARY_DIR}/log_code.cc"
+  "${CMAKE_CURRENT_BINARY_DIR}/log_print.cc"
   )
 
 add_library(ft SHARED ${FT_SOURCES})

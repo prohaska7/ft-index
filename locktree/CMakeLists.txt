@@ -1,13 +1,13 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(locktree_srcs
-    locktree
-    manager
-    lock_request
-    txnid_set
-    range_buffer
-    keyrange
-    wfg
+    locktree.cc
+    manager.cc
+    lock_request.cc
+    txnid_set.cc
+    range_buffer.cc
+    keyrange.cc
+    wfg.cc
     )
 
 ## make the shared library for tests
