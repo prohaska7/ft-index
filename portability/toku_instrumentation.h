@@ -95,7 +95,8 @@ class toku_instr_key {
    public:
     toku_instr_key(UU(toku_instr_object_type type),
                    UU(const char *group),
-                   UU(const char *name)) {}
+                   UU(const char *name),
+                   UU(const char *os_name) = nullptr) {}
 
     explicit toku_instr_key(UU(pfs_key_t key_id)) {}
 
