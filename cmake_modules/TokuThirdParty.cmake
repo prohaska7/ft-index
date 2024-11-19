@@ -48,6 +48,7 @@ ExternalProject_Add_Step(build_lzma reclone_src # Names of project and custom st
     COMMENT "(re)cloning xz source..."     # Text printed when step executes
     DEPENDERS download configure   # Steps that depend on this step
     DEPENDS   ${XZ_ALL_FILES_RECURSIVE}   # Files on which this step depends
+    INDEPENDENT TRUE
 )
 
 set_source_files_properties(
@@ -74,7 +75,6 @@ add_library(lzma STATIC IMPORTED)
 set_target_properties(lzma PROPERTIES IMPORTED_LOCATION
   "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/xz/lib/liblzma.a")
 add_dependencies(lzma build_lzma)
-
 
 ## add snappy with an external project
 set(SNAPPY_SOURCE_DIR "${TokuDB_SOURCE_DIR}/third_party/snappy-1.1.2" CACHE FILEPATH "Where to find sources for snappy.")
@@ -104,6 +104,7 @@ ExternalProject_Add_Step(build_snappy reclone_src # Names of project and custom 
     COMMENT "(re)cloning snappy source..."     # Text printed when step executes
     DEPENDERS download configure   # Steps that depend on this step
     DEPENDS   ${SNAPPY_ALL_FILES_RECURSIVE}   # Files on which this step depends
+    INDEPENDENT TRUE
 )
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/snappy/include")
