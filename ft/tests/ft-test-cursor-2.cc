@@ -74,8 +74,10 @@ static void test_multiple_ft_cursor_dbts(int n) {
     for (i=0; i<n; i++) {
 	DBT kbt,vbt;
 	char key[10],val[10];
-	snprintf(key, sizeof key, "k%04d", i);
-	snprintf(val, sizeof val, "v%04d", i);
+	r = snprintf(key, sizeof key, "k%04d", i);
+        assert(r == 5);
+	r = snprintf(val, sizeof val, "v%04d", i);
+        assert(r == 5);
 	toku_ft_insert(ft,
                        toku_fill_dbt(&kbt, key, 1+strlen(key)),
                        toku_fill_dbt(&vbt, val, 1+strlen(val)),
@@ -91,7 +93,8 @@ static void test_multiple_ft_cursor_dbts(int n) {
     for (i=0; i<n; i++) {
 	DBT kbt;
 	char key[10];
-	snprintf(key, sizeof key, "k%04d", i);
+	r = snprintf(key, sizeof key, "k%04d", i);
+        assert(r == 5);
 	r = toku_ft_cursor_get(cursors[i],
 				toku_fill_dbt(&kbt, key, 1+strlen(key)),
 				save_data,

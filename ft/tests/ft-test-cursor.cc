@@ -126,7 +126,8 @@ static void test_ft_cursor_first(int n) {
         char key[8]; long long v;
         DBT kbt, vbt;
 
-        snprintf(key, sizeof key, "%4.4d", i);
+        r = snprintf(key, sizeof key, "%4.4d", i);
+        assert(r == 4);
         toku_fill_dbt(&kbt, key, strlen(key)+1);
         v = i;
         toku_fill_dbt(&vbt, &v, sizeof v);
@@ -164,12 +165,12 @@ static void test_ft_cursor_last(int n) {
         char key[8]; long long v;
         DBT kbt, vbt;
 
-        snprintf(key, sizeof key, "%4.4d", i);
+        r = snprintf(key, sizeof key, "%4.4d", i);
+        assert(r == 4);
         toku_fill_dbt(&kbt, key, strlen(key)+1);
         v = i;
         toku_fill_dbt(&vbt, &v, sizeof v);
         toku_ft_insert(ft, &kbt, &vbt, 0);
-        assert(r==0);
     }
 
     if (n == 0)
@@ -203,7 +204,8 @@ static void test_ft_cursor_first_last(int n) {
         char key[8]; long long v;
         DBT kbt, vbt;
 
-        snprintf(key, sizeof key, "%4.4d", i);
+        r = snprintf(key, sizeof key, "%4.4d", i);
+        assert(r == 4);
         toku_fill_dbt(&kbt, key, strlen(key)+1);
         v = i;
         toku_fill_dbt(&vbt, &v, sizeof v);
@@ -246,7 +248,8 @@ static void test_ft_cursor_rfirst(int n) {
         DBT kbt, vbt;
 
 
-        snprintf(key, sizeof key, "%4.4d", i);
+        r = snprintf(key, sizeof key, "%4.4d", i);
+        assert(r == 4);
         toku_fill_dbt(&kbt, key, strlen(key)+1);
         v = i;
         toku_fill_dbt(&vbt, &v, sizeof v);
@@ -309,7 +312,8 @@ static void test_ft_cursor_walk(int n) {
         char key[8]; long long v;
         DBT kbt, vbt;
 
-        snprintf(key, sizeof key, "%4.4d", i);
+        r = snprintf(key, sizeof key, "%4.4d", i);
+        assert(r == 4);
         toku_fill_dbt(&kbt, key, strlen(key)+1);
         v = i;
         toku_fill_dbt(&vbt, &v, sizeof v);
@@ -454,7 +458,8 @@ static void test_ft_cursor_rand(int n) {
 
         for (;;) {
 	    v = ((long long) random() << 32) + random();
-	    snprintf(key, sizeof key, "%lld", v);
+	    r = snprintf(key, sizeof key, "%lld", v);
+            assert(r > 0);
 	    toku_fill_dbt(&kbt, key, strlen(key)+1);
 	    v = i;
 	    toku_fill_dbt(&vbt, &v, sizeof v);
@@ -502,7 +507,8 @@ static void test_ft_cursor_split(int n) {
 	DBT kbt, vbt;
         char key[8]; long long v;
 
-        snprintf(key, sizeof key, "%4.4d", keyseqnum);
+        r = snprintf(key, sizeof key, "%4.4d", keyseqnum);
+        assert(r == 4);
         toku_fill_dbt(&kbt, key, strlen(key)+1);
         v = keyseqnum;
         toku_fill_dbt(&vbt, &v, sizeof v);
@@ -525,7 +531,8 @@ static void test_ft_cursor_split(int n) {
 	DBT kbt,vbt;
         char key[8]; long long v;
 
-        snprintf(key, sizeof key, "%4.4d", keyseqnum);
+        r = snprintf(key, sizeof key, "%4.4d", keyseqnum);
+        assert(r == 4);
         toku_fill_dbt(&kbt, key, strlen(key)+1);
         v = keyseqnum;
         toku_fill_dbt(&vbt, &v, sizeof v);

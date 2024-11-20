@@ -65,7 +65,8 @@ test_main (int argc __attribute__((__unused__)),
 
 	int ilen=3+random()%5;
 	toku_logger_make_space_in_inbuf(logger, ilen+1);
-	snprintf(logger->inbuf.buf+logger->inbuf.n_in_buf, ilen+1, "a%0*d ", (int)ilen, i);
+	r = snprintf(logger->inbuf.buf+logger->inbuf.n_in_buf, ilen+1, "a%0*d ", (int)ilen, i);
+        assert(r > 0);
 	logger->inbuf.n_in_buf+=(ilen+1);
 	logger->lsn.lsn++;
 	logger->inbuf.max_lsn_in_buf = logger->lsn;
