@@ -192,8 +192,9 @@ run_test(int ndbs, int nrows) {
 
     verify_del_multiple(env, db, ndbs, nrows);
 
-    for (int dbnum = 0; dbnum < ndbs; dbnum++) 
+    for (int dbnum = 0; dbnum < ndbs; dbnum++) {
         r = db[dbnum]->close(db[dbnum], 0); assert_zero(r);
+    }
 
     r = env->close(env, 0); assert_zero(r);
 }

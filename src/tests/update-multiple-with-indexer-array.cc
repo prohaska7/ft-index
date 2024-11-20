@@ -409,8 +409,9 @@ run_test(int ndbs, int nrows) {
     verify_pri_seq(env, db[0], ndbs, nrows);
     for (int dbnum = 1; dbnum < ndbs; dbnum++)
         verify_sec_seq(env, db[dbnum], dbnum, nrows);
-    for (int dbnum = 0; dbnum < ndbs; dbnum++)
+    for (int dbnum = 0; dbnum < ndbs; dbnum++) {
         r = db[dbnum]->close(db[dbnum], 0); assert_zero(r);
+    }
 
     r = env->close(env, 0); assert_zero(r);
 }
