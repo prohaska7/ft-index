@@ -318,7 +318,7 @@ int ft_loader_open_temp_file (FTLOADER bl, FIDX *file_idx)
             result = get_error_errno();
         } else {
             f = toku_os_fdopen(fd, "r+", fname, *tokudb_file_tmp_key);
-            if (f->file == nullptr)
+            if (f == nullptr)
                 result = get_error_errno();
             else
                 result = open_file_add(&bl->file_infos, f, fname, file_idx);
