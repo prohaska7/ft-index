@@ -2422,7 +2422,6 @@ static int toku_loader_write_ft_from_q (FTLOADER bl,
     // The pivots file will contain all the pivot strings (in the form <size(32bits)> <data>)
     // The pivots_fname is the name of the pivots file.
     // Note that the pivots file will have one extra pivot in it (the last key in the dictionary) which will not appear in the tree.
-    int64_t n_pivots=0; // number of pivots in pivots_file
     FIDX pivots_file;  // the file
 
     r = ft_loader_open_temp_file (bl, &pivots_file);
@@ -2538,8 +2537,6 @@ static int toku_loader_write_ft_from_q (FTLOADER bl,
 
                 allocate_node(&sts, lblock);
 
-                n_pivots++;
-
                 invariant(maxkey.data != NULL);
                 if ((r = bl_write_dbt(&maxkey, pivots_stream, NULL, nullptr, bl))) {
                     ft_loader_set_panic(bl, r, true, which_db, nullptr, nullptr);
@@ -2614,8 +2611,6 @@ static int toku_loader_write_ft_from_q (FTLOADER bl,
 
     // We haven't paniced, so the sum should add up.
     invariant(used_estimate == total_disksize_estimate);
-
-    n_pivots++;
 
     {
         DBT key = make_dbt(0,0); // must write an extra DBT into the pivots file.

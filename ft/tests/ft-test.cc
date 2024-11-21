@@ -1091,8 +1091,6 @@ static void test_new_ft_cursor_current(int n) {
         r = toku_ft_cursor_delete(cursor, 0, null_txn); assert(r == 0);
 
 	{
-	    static int count=0;
-	    count++;
 	    struct check_pair pair = {0,0,0,0,0};
 	    r = toku_ft_cursor_get(cursor, NULL, lookup_checkf, &pair, DB_CURRENT);
 	    CKERR2(r,DB_NOTFOUND); // previous DB_KEYEMPTY
