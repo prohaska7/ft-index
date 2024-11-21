@@ -136,6 +136,20 @@ prepend_cflags_if_supported_remove_unsupported(
   -Wno-error=nonnull-compare
   )
 
+if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+  prepend_cflags_if_supported_remove_unsupported(
+    -Wno-maybe-uninitialized
+  )
+endif ()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
+  prepend_cflags_if_supported_remove_unsupported(
+    -Wno-vla-cxx-extension
+    -Wno-unused-but-set-variable
+    -Wno-compound-token-split-by-macro
+  )
+endif ()
+
 if (CMAKE_CXX_FLAGS MATCHES -fno-implicit-templates)
   # must append this because mysql sets -fno-implicit-templates and we need to override it
   check_cxx_compiler_flag(-fimplicit-templates HAVE_CXX_-fimplicit-templates)
