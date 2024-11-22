@@ -51,7 +51,7 @@ static void create_foo(DB_ENV *env, DB_TXN *txn) {
     DB *db = nullptr;
     r = db_create(&db, env, 0);
     CKERR(r);
-    r = db->open(db, txn, "foo.db", 0, DB_BTREE, DB_CREATE,  S_IRWXU+S_IRWXG+S_IRWXO);
+    r = db->open(db, txn, "foo.db", 0, DB_BTREE, DB_CREATE, S_IRWXU+S_IRWXG+S_IRWXO);
     CKERR(r);
     r = db->close(db, 0);
     CKERR(r);
@@ -62,7 +62,7 @@ static void populate_foo(DB_ENV *env, DB_TXN *txn) {
     DB *db = nullptr;
     r = db_create(&db, env, 0);
     CKERR(r);
-    r = db->open(db, txn, "foo.db", 0, DB_BTREE, 0, 0);
+    r = db->open(db, txn, "foo.db", 0, DB_BTREE, 0, S_IRWXU+S_IRWXG+S_IRWXO);
     CKERR(r);
 
     for (int i = 0; i < test_nrows; i++) {
