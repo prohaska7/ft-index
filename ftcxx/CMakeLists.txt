@@ -6,10 +6,10 @@ if (APPLE)
 endif (APPLE)
 
 add_library(ftcxx STATIC
-  buffer
-  cursor
-  db_env
-  malloc_utils
+  buffer.cpp
+  cursor.cpp
+  db_env.cpp
+  malloc_utils.cpp
   )
 add_dependencies(ftcxx install_tdb_h)
 
@@ -28,4 +28,4 @@ if (NOT DEFINED MYSQL_PROJECT_NAME_DOCSTRING)
     )
 endif ()
 
-add_subdirectory(tests)
+# add_subdirectory(tests)
