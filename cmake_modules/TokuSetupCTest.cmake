@@ -125,13 +125,18 @@ if (BUILD_TESTING OR BUILD_FT_TESTS OR BUILD_SRC_TESTS)
     add_toku_test_aux(${pfx} ${bin} ${bin} ${ARGN})
   endmacro(add_toku_test)
 
+  option(VALGRIND_FAIR_SCHED "use valgrind --fair-sched=try" OFF)
+  if (VALGRIND_FAIR_SCHED)
+    set(VALGRIND_FAIR_SCHED_ARG "--fair-sched=try")
+  endif ()
+
   ## setup a function to write tests that will run with helgrind
   set(CMAKE_HELGRIND_COMMAND_STRING "valgrind --quiet --tool=helgrind --error-exitcode=1 --soname-synonyms=somalloc=*tokuportability* --suppressions=${TokuDB_SOURCE_DIR}/src/tests/helgrind.suppressions --trace-children=yes --trace-children-skip=sh,*/sh,basename,*/basename,dirname,*/dirname,rm,*/rm,cp,*/cp,mv,*/mv,cat,*/cat,diff,*/diff,grep,*/grep,date,*/date,test,*/tokudb_dump* --trace-children-skip-by-arg=--only_create,--test,--no-shutdown,novalgrind")
   function(add_helgrind_test pfx name)
     separate_arguments(CMAKE_HELGRIND_COMMAND_STRING)
     add_test(
       NAME ${pfx}/${name}
-      COMMAND ${CMAKE_HELGRIND_COMMAND_STRING} ${ARGN}
+      COMMAND ${CMAKE_HELGRIND_COMMAND_STRING} ${VALGRIND_FAIR_SCHED_ARG} ${ARGN}
       )
     setup_toku_test_properties(${pfx}/${name} ${name})
   endfunction(add_helgrind_test)
@@ -142,7 +147,7 @@ if (BUILD_TESTING OR BUILD_FT_TESTS OR BUILD_SRC_TESTS)
     separate_arguments(CMAKE_DRD_COMMAND_STRING)
     add_test(
       NAME ${pfx}/${name}
-      COMMAND ${CMAKE_DRD_COMMAND_STRING} ${ARGN}
+      COMMAND ${CMAKE_DRD_COMMAND_STRING} ${VALGRIND_FAIR_SCHED_ARG} ${ARGN}
       )
     setup_toku_test_properties(${pfx}/${name} ${name})
   endfunction(add_drd_test)
