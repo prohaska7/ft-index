@@ -73,7 +73,7 @@ typedef struct {
     uint32_t *flags;
 } client_spec_t, *client_spec;
 
-int client_count = 0;
+std::atomic_int client_count (0);
 
 static void * client(void *arg)
 {
@@ -229,6 +229,7 @@ static int check_results(DB *src, DB *db)
         r = cursor->c_get(cursor, &key, &val, DB_NEXT);
         if ( r != DB_NOTFOUND ) {
             k = *((uint32_t *)(key.data));
+            assert(row < max_rows);
             db_keys[row] = twiddle32(k, which);
             row++;
         }
@@ -337,6 +338,7 @@ static void test_indexer(DB *src, DB **dbs)
     void *t0;      r = toku_pthread_join(client_threads[0], &t0);     CKERR(r);
     void *t1;      r = toku_pthread_join(client_threads[1], &t1);     CKERR(r);
 //    void *t2;      r = toku_pthread_join(client_threads[2], &t2);     CKERR(r);
+    assert(client_count == 2);
 
     if ( verbose ) printf("test_indexer close\n");
     r = indexer->close(indexer);
