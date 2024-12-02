@@ -291,4 +291,18 @@
     ...
     fun:_dl_init
 }
-
+{
+   <posix_memalign_bad_alignment>
+   Memcheck:BadAlign
+   fun:posix_memalign
+}
+{
+   <posix_memalign_bad_size>
+   Memcheck:BadSize
+   fun:posix_memalign
+}
+{
+   <realloc-zero-size-parameter>
+   Memcheck:ReallocZero
+   fun:realloc
+}
